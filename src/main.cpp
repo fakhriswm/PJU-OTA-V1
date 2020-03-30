@@ -25,6 +25,7 @@
 
 #define MANUAL_MODE 0
 #define AUTOMATIC_MODE 1
+#define NIGHT_MODE 2
 
 //Library
 #include <Arduino.h>
@@ -48,6 +49,7 @@ slave slave;
 
 AlarmId on_alarm, 
         off_alarm, 
+        night_alarm,
         dailysync_alarm;
 
 const String dev_type = "slg/";
@@ -74,6 +76,7 @@ uint32_t  on_hour = 0,
 
 uint8_t dimmer1 = 0;
 uint8_t dimmer2 = 0;
+uint16_t lamppower = 0;
 
 uint8_t now_hour = 0, 
         now_minute = 0, 
@@ -84,7 +87,8 @@ uint8_t now_hour = 0,
 uint16_t now_year = 0;
 uint8_t timer_update = 0;
 uint8_t timer_request = 0;
-bool command_lamp = 0;
+bool command_lamp = false;
+bool lamp_state = false;
 
 //RTOS_func_declaration
 void task_connectivity( void *pvParameters );
@@ -100,9 +104,10 @@ void cek_time();
 void data_process(float volt, float curr, float pow, float wh, float freq, float pf);
 void control_on();
 void control_off();
+void control_dimmer();
 void update_data();
 void adjust_time(uint16_t year, uint8_t month, uint8_t date, uint8_t hour, uint8_t minute,  uint8_t second);
-void change_schedule(bool change_mode);
+void change_schedule(uint8_t change_mod);
 void cek_lampstate();
 
 void setup() {
@@ -141,7 +146,7 @@ void RTOS_initialization(){
    xTaskCreatePinnedToCore(
     task_connectivity
     ,  "task_connectivity"   // A name just for humans
-    ,  10000  // This stack size can be checked & adjusted by reading the Stack Highwater
+    ,  20000  // This stack size can be checked & adjusted by reading the Stack Highwater
     ,  NULL
     ,  3  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
     ,  NULL 
@@ -150,9 +155,9 @@ void RTOS_initialization(){
   xTaskCreatePinnedToCore(
     task_lamp
     ,  "task_lamp"
-    ,  10000  // Stack size
+    ,  20000  // Stack size
     ,  NULL
-    ,  2  // Priority
+    ,  3  // Priority
     ,  NULL 
     ,  ARDUINO_RUNNING_CORE);
 }
@@ -160,6 +165,7 @@ void RTOS_initialization(){
 void task_connectivity(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
+  Serial.println("task connectivity");
   gsmConnect();
   mqtt.setServer(backend.c_str(), backend_port);
   mqtt.setCallback(mqttCallback);
@@ -179,9 +185,12 @@ void task_lamp(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
     cek_time();
-    if(mode == AUTOMATIC_MODE){
+    if(mode != MANUAL_MODE){
       on_alarm = Alarm.alarmRepeat(on_hour,on_minute,0, control_on);
       off_alarm = Alarm.alarmRepeat(off_hour,off_minute,0, control_off);
+      if(mode != NIGHT_MODE){
+        night_alarm = Alarm.alarmRepeat(night_hour,night_minute,0,control_dimmer);  
+      }
     }
     else{
       if(ctrl == LAMP_ON){
@@ -195,7 +204,7 @@ void task_lamp(void *pvParameters)  // This is a task.
   for (;;)
   {
     serial_handle();
-    Alarm.delay(10);
+    Alarm.delay(1000);
   }
 }
 
@@ -247,6 +256,7 @@ void reconnect() {
     }
     if(retry_error>=5){
       retry_error = 0;
+      gsmConnect();
     }
   }
 }
@@ -269,12 +279,12 @@ void cek_time(){
   now_date = chrono.getDate(); delay(2);
   now_month = chrono.getMonth(); delay(2);
   now_year = chrono.getYear(); delay(2);
-  // Serial.println((String)now_hour+":"
-  //               +(String)now_minute+":"
-  //               +(String)now_second+" "
-  //               +(String)now_date+"/"
-  //               +(String)now_month+"/"
-  //               +(String)now_year);
+  Serial.println((String)now_hour+":"
+                +(String)now_minute+":"
+                +(String)now_second+" "
+                +(String)now_date+"/"
+                +(String)now_month+"/"
+                +(String)now_year);
   setTime(
           now_hour
           ,now_minute
@@ -292,7 +302,14 @@ void gsm_timeInit(){
 }
 
 void data_process(float volt, float curr, float pow, float wh, float freq, float pf){
-  String pub_data = String(wh)+","+String(pow)+","+String(volt)+","+String(curr)+","+String(pf);
+  if(pow >= (0.5*lamppower)){
+    lamp_state = true;
+  }
+  else{
+    lamp_state = false;
+  }
+
+  String pub_data = String(wh)+","+String(pow)+","+String(volt)+","+String(curr)+","+String(pf)+","+String(command_lamp)+","+String(lamp_state);
   String pub_topic = DATA_TOPIC;
   
   if(mqtt.connected()){
@@ -308,10 +325,15 @@ void data_process(float volt, float curr, float pow, float wh, float freq, float
 }
 
 void control_on(){
+  command_lamp = true;
   slave.send_command(LAMP_ON);
 }
 void control_off(){
+  command_lamp = false;
   slave.send_command(LAMP_OFF);
+}
+void control_dimmer(){
+  Serial.println("night mode");
 }
 void update_data(){
   slave.request_data();
@@ -323,21 +345,25 @@ void adjust_time(uint16_t year, uint8_t month, uint8_t date, uint8_t hour, uint8
                   + (String)hour + (String)minute + (String)second);
 }
 
-void change_schedule(bool change_mod){
+void change_schedule(uint8_t change_mod){
   //Serial.println("schedule change");
   Alarm.free(on_alarm);
   on_alarm = dtINVALID_ALARM_ID;
   Alarm.free(off_alarm);
   off_alarm = dtINVALID_ALARM_ID;
   delay(1000);
-
-  if(change_mod == AUTOMATIC_MODE){
-    on_alarm = Alarm.alarmRepeat(on_hour,on_minute,0, control_on);
-    off_alarm = Alarm.alarmRepeat(off_hour,off_minute,0, control_off);
-  }
-  else if(change_mod == MANUAL_MODE){
+  if(change_mod == MANUAL_MODE){
     slave.send_command(ctrl);
     delay(50);
+  }
+  else{
+    on_alarm = Alarm.alarmRepeat(on_hour,on_minute,0, control_on);
+    off_alarm = Alarm.alarmRepeat(off_hour,off_minute,0, control_off);
+    if(change_mod == NIGHT_MODE){
+      Alarm.free(night_alarm);
+      night_alarm = dtINVALID_ALARM_ID;
+      night_alarm = Alarm.alarmRepeat(night_hour,night_minute,0, control_dimmer);
+    }
   }
   cek_lampstate();
 }
@@ -346,8 +372,20 @@ void cek_lampstate(){
   unsigned long cur_time = ((uint32_t)chrono.getHour()*3600) + ((uint32_t)chrono.getMinute()*60) + ((uint32_t)chrono.getSecond());
   unsigned long on_time = (on_hour*3600) + (on_minute*60);
   unsigned long off_time = (off_hour*3600) + (off_minute*60);
+  unsigned long night_time = (night_hour*3600) + (night_minute*60);
   
-  if(mode == AUTOMATIC_MODE)
+  if(mode == MANUAL_MODE)
+  {
+    if(ctrl==1)
+    {
+      control_on();
+    }
+    else
+    {
+      control_off();
+    }
+  }
+  else
   {
     if((int)(on_hour-off_hour)>0) 
       {
@@ -355,6 +393,11 @@ void cek_lampstate(){
           {
             control_on();
             Serial.println("on1");
+            if(mode == NIGHT_MODE){
+              if((cur_time>=night_time) || (cur_time<=night_time && cur_time<=on_time)){
+                Serial.println("night mode1 on");
+              }
+            }
           }
           else
           {
@@ -373,19 +416,11 @@ void cek_lampstate(){
           {
             control_on();
             Serial.println("on2");
+            if(cur_time>=night_time){
+              Serial.println("night mode2 on");
+            }
           }
         }
-  }
-  else if(mode == MANUAL_MODE)
-  {
-    if(ctrl==1)
-    {
-      control_on();
-    }
-    else
-    {
-      control_off();
-    }
   }
 }
 

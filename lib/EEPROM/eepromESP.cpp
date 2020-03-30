@@ -250,3 +250,12 @@ uint8_t eepromESP::read_timedelay()
 {
     return read_byte(ee_timedelay);
 }
+void eepromESP::set_lamppower(uint16_t lamppower)
+{
+    write_byte(ee_lamppower, lamppower);
+}
+
+uint16_t eepromESP::read_lamppower()
+{
+    return read_byte(ee_lamppower);
+}

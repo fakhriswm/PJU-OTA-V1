@@ -37,4 +37,6 @@
 #define ee_dimmer2_len      uint8_len
 #define ee_NigtSchedule     ee_dimmer2 + ee_dimmer2_len
 #define ee_NightSchedule_len   null_terminator + 8
+#define ee_lamppower        ee_NigtSchedule + ee_NightSchedule_len
+#define ee_lamppower_len    uint16_len
 

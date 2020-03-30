@@ -28,10 +28,11 @@ extern uint8_t ctrl;
 extern uint16_t timedelay;
 extern uint8_t dimmer1;
 extern uint8_t dimmer2;
+extern uint16_t lamppower;
 extern bool command_lamp;
 extern void data_process(float volt, float curr, float pow, float wh, float freq, float pf);
 extern void adjust_time(uint16_t year, uint8_t month, uint8_t date, uint8_t hour, uint8_t minute,  uint8_t second);
-extern void change_schedule(bool change_mode);
+extern void change_schedule(uint8_t change_mod);
 
 void serial_handle();
 void config_all();
@@ -43,6 +44,7 @@ String parse_time(const String& value);
 String parse_server(const String& value);
 String parse_dimmer(const String& value);
 String parse_timedelay(const String& value);
+String parse_lamppower(const String& value);
 String callback_handle(String subtopic, String payload);
 
 class slave {
@@ -50,6 +52,7 @@ class slave {
     void request_data();
     void send_command(bool control);
     void reset_energy();
+    void reset_mcu();
 };
 
 #endif /* LIB_TOOL_TOOL_H_ */

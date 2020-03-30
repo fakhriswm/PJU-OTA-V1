@@ -9,6 +9,8 @@
 #include "tool.h"
 #include <confmanager.h>
 
+#define TOKEN_LENGTH 6
+
 confmanager config_t;
 time_on_config_t time_on_cfg;
 time_off_config_t time_off_cfg;
@@ -62,6 +64,10 @@ void serial_handle(){
         else if(command_type=="dimmer"){
           parse_dimmer(value);
           Serial.println("dimmer update :" + value);
+        }
+        else if(command_type=="lamppower"){
+          parse_lamppower(value);
+          Serial.println("lamppower" + value);
         }
       }
       else if(command=="rst"){
@@ -163,6 +169,12 @@ String parse_timedelay(const String& value){
   return "tdelay|1";
 }
 
+String parse_lamppower(const String& value){
+  lamppower = value.toInt();
+  config_t.set_lamppower(lamppower);
+  return "lamp|1";
+}
+
 
 String parse_string(String data, char separator, int index){
   int found = 0;
@@ -205,30 +217,43 @@ void config_all()
   timedelay = config_t.read_timedelay(); Serial.println("tdelay :" + (String)timedelay);
   dimmer1 = config_t.read_dimmer1(); Serial.println("dimmer1 :" + (String)dimmer1);
   dimmer2 = config_t.read_dimmer2(); Serial.println("dimmer2 :" + (String)dimmer2);
+  lamppower = config_t.read_lamppower(); Serial.println("lamppower :" + (String)lamppower);
   
 }
 
 String callback_handle(String subtopic, String payload){
-    String token = "|"+ parse_string(payload,'-',1);
-    String value = parse_string(payload,'-',0); 
-    if       (subtopic == "/dim"){
-      return parse_dimmer(value) + token;}
-    else if  (subtopic == "/timesync"){
-      return parse_time(value) + token;}
-    else if  (subtopic == "/mode"){
-      return parse_mode(value) + token;}
-    else if  (subtopic == "/cfg"){}
-    else if  (subtopic =="/reset"){
-      Serial.println("Restarting");
-      ESP.restart();
+    String ret_token = parse_string(payload,'-',1);
+    if(ret_token.length()==TOKEN_LENGTH){
+      String value = parse_string(payload,'-',0); 
+      String token = "|" + ret_token;
+      if       (subtopic == "/dim"){
+        return parse_dimmer(value) + token;}
+      else if  (subtopic == "/timesync"){
+        return parse_time(value) + token;}
+      else if  (subtopic == "/mode"){
+        return parse_mode(value) + token;}
+      // else if  (subtopic == "/cfg"){}
+      else if  (subtopic =="/reset"){
+        Serial.println("Restarting");
+        ESP.restart();
+        }
+      else if (subtopic == "/resetslave"){
+        Serial.println("slave reset");
+        Slave.reset_mcu();
+        return "rstslave|1" + token;}
+      else if  (subtopic == "/rstwh"){
+        Slave.reset_energy();
+        return "rstwh|1" + token;}
+      else if  (subtopic == "/timedelay"){
+        return parse_timedelay(value) + token;}
+      else if  (subtopic == "/server"){
+        return parse_server(value) + token;}
+      else if (subtopic == "/lamppower"){
+        return parse_lamppower(value) + token;}
+      } 
+      else{
+         return "";
       }
-    else if  (subtopic == "/rstwh"){
-      Slave.reset_energy();
-      return "rstwh|1" + token;}
-    else if  (subtopic == "/timedelay"){
-      return parse_timedelay(value) + token;}
-    else if  (subtopic == "/server"){
-      return parse_server(value) + token;}    
 }
 
 void slave::request_data(){
@@ -248,3 +273,7 @@ void slave::reset_energy(){
   Serial.println("#RSTWH");
 
 }
+
+void slave::reset_mcu(){
+  Serial.println("#RSTMCU");
+} 

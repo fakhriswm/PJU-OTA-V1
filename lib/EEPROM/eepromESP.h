@@ -53,4 +53,6 @@ class eepromESP {
         String read_port();
         void set_timedelay(uint8_t value);
         uint8_t read_timedelay();
+        void set_lamppower(uint16_t lamppower);
+        uint16_t read_lamppower();
 };

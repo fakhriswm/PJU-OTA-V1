@@ -153,4 +153,18 @@ uint8_t confmanager::read_dimmer2(){
     return value;
 }
 
+ uint16_t confmanager :: set_lamppower(uint16_t payload){
+     if(payload>0){
+        conf.set_lamppower(payload);
+        return payload;
+    }
+    else{
+        return 0;
+    }
+ }
+
+uint16_t confmanager::read_lamppower(){
+    uint16_t value = conf.read_lamppower();
+    return value;
+} 
 

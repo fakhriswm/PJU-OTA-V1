@@ -28,6 +28,7 @@ public :
     uint8_t set_control (uint8_t payload);
     uint8_t set_mode (uint8_t payload);
     uint8_t set_timedelay (uint8_t payload);
+    uint16_t set_lamppower(uint16_t payload);
     String set_port (const String& payload);
     String set_backend(const String& payload);
     String set_user(const String& payload);
@@ -40,6 +41,7 @@ public :
     uint8_t read_timedelay();
     uint8_t read_dimmer1();
     uint8_t read_dimmer2();
+    uint16_t read_lamppower();
     String read_port();
     String read_backend();
     String read_user();
