@@ -9,6 +9,7 @@
 #include "tool.h"
 #include <confmanager.h>
 
+
 #define TOKEN_LENGTH 6
 
 confmanager config_t;
@@ -218,7 +219,6 @@ void config_all()
   dimmer1 = config_t.read_dimmer1(); Serial.println("dimmer1 :" + (String)dimmer1);
   dimmer2 = config_t.read_dimmer2(); Serial.println("dimmer2 :" + (String)dimmer2);
   lamppower = config_t.read_lamppower(); Serial.println("lamppower :" + (String)lamppower);
-  
 }
 
 String callback_handle(String subtopic, String payload){
@@ -250,10 +250,12 @@ String callback_handle(String subtopic, String payload){
         return parse_server(value) + token;}
       else if (subtopic == "/lamppower"){
         return parse_lamppower(value) + token;}
-      } 
-      else{
-         return "";
-      }
+      else if (subtopic == "/OTA"){
+        running_OTA();}
+    } 
+    else{
+       return "";
+    }
 }
 
 void slave::request_data(){

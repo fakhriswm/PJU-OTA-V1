@@ -38,10 +38,13 @@
 #include <eepromESP_table.h>
 #include <TimeLib.h>
 #include <TimeAlarms.h>
+#include <OTA_manager.h>
+#include <CRC32.h>
 
 TinyGsm modem(SerialAT);
 TinyGsmClient client(modem);
 PubSubClient mqtt(client);
+update_manager OTA_manager;
 
 timeGSM chrono;
 eepromESP flash;
@@ -60,6 +63,9 @@ String backend_user   = "";
 String backend_pass   = "";
 uint16_t backend_port = 0;
 
+String ota_server = "firmware-esp.s3-ap-southeast-1.amazonaws.com";
+uint16_t ota_port = 80;
+String ota_resource = "/firmware.bin";
 
 uint8_t netfail_counter = 0;
 uint8_t mode = 0;
@@ -109,6 +115,7 @@ void update_data();
 void adjust_time(uint16_t year, uint8_t month, uint8_t date, uint8_t hour, uint8_t minute,  uint8_t second);
 void change_schedule(uint8_t change_mod);
 void cek_lampstate();
+void running_OTA();
 
 void setup() {
   // put your setup code here, to run once:
@@ -146,7 +153,7 @@ void RTOS_initialization(){
    xTaskCreatePinnedToCore(
     task_connectivity
     ,  "task_connectivity"   // A name just for humans
-    ,  20000  // This stack size can be checked & adjusted by reading the Stack Highwater
+    ,  30000  // This stack size can be checked & adjusted by reading the Stack Highwater
     ,  NULL
     ,  3  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
     ,  NULL 
@@ -157,7 +164,7 @@ void RTOS_initialization(){
     ,  "task_lamp"
     ,  20000  // Stack size
     ,  NULL
-    ,  3  // Priority
+    ,  2  // Priority
     ,  NULL 
     ,  ARDUINO_RUNNING_CORE);
 }
@@ -177,7 +184,7 @@ void task_connectivity(void *pvParameters)  // This is a task.
     {
       reconnect();
     }
-    delay(15);  // one tick delay (15ms) in between reads for stability
+    vTaskDelay(1); // one tick delay (15ms) in between reads for stability
   }
 }
 
@@ -205,6 +212,7 @@ void task_lamp(void *pvParameters)  // This is a task.
   {
     serial_handle();
     Alarm.delay(1000);
+    vTaskDelay(1);
   }
 }
 
@@ -424,3 +432,122 @@ void cek_lampstate(){
   }
 }
 
+void running_OTA()
+{
+  uint32_t knownCRC32 = 0x6f50d767;
+  uint32_t knownFileSize = 1024;
+  OTA_manager.spiffs_init();
+  gsmConnect();
+  Serial.print("connect OTA server :" + ota_server);
+  if (!client.connect(ota_server.c_str(), ota_port))
+    {
+        Serial.println(" fail connect OTA server");
+        delay(10000);
+        return;
+    }
+  Serial.println("connected to OTA server");
+  // Make a HTTP request:
+  client.print(String("GET ") + ota_resource + " HTTP/1.0\r\n");
+  client.print(String("Host: ") + ota_server + "\r\n");
+  client.print("Connection: close\r\n\r\n");
+  long timeout = millis();
+  while (client.available() == 0)
+    {
+       if (millis() - timeout > 500000L)
+        {
+          Serial.println(">>> Client Timeout !");
+          client.stop();
+          delay(10000L);
+          return;
+        }
+    }
+
+  Serial.println("Receiving Header");
+    uint32_t contentLength = knownFileSize;
+
+    File file = SPIFFS.open("/update.bin", FILE_APPEND);
+
+    while (client.available())
+    {
+        String line = client.readStringUntil('\n');
+        line.trim();
+        Serial.println(line);    // Uncomment this to show response header
+        line.toLowerCase();
+        if (line.startsWith("content-length:"))
+        {
+            contentLength = line.substring(line.lastIndexOf(':') + 1).toInt();
+        }
+        else if (line.length() == 0)
+        {
+            break;
+        }
+    }
+
+    Serial.println("Receiving Response");
+    timeout = millis();
+    uint32_t readLength = 0;
+    CRC32 crc;
+
+    unsigned long timeElapsed = millis();
+    OTA_manager.printPercent(readLength, contentLength);
+    char c;
+    while (readLength < contentLength)
+    {
+        int i = 0;
+        while (client.available())
+        {
+           c =  char(client.read());
+            //Serial.print((char)c);
+                   // Uncomment this to show data
+            if (!file.print(c))
+            {
+                Serial.println("Append failed");
+            }
+            //crc.update(c);
+            readLength++;
+            if (readLength % (contentLength / 13) == 0)
+            {
+                OTA_manager.printPercent(readLength, contentLength);
+            }
+            timeout = millis();
+        }
+    }
+
+    file.close();
+
+    OTA_manager.printPercent(readLength, contentLength);
+    timeElapsed = millis() - timeElapsed;
+    Serial.println();
+
+    client.stop();
+    Serial.println("Disconnected from Server");
+    vTaskDelay(1);
+    modem.gprsDisconnect();
+    Serial.println("GPRS Disconnected");
+    vTaskDelay(1);
+    //float duration = float(timeElapsed) / 1000.0;
+
+    Serial.println("File size: " + contentLength);
+    Serial.println("read : " + readLength);
+    Serial.print("Calculated. CRC32: 0x");
+    Serial.println(crc.finalize(), HEX);
+    Serial.print("known CRC32:    0x");
+    Serial.println(knownCRC32, HEX);
+    //Serial.println("Time duration: " + String(duration) + "s");
+    Serial.println("Wait for 3 second");
+    for (int i = 0; i < 3; i++)
+    {
+        Serial.print(String(i) + "...");
+        delay(1000);
+    }
+
+    //readFile(SPIFFS, "/update.bin");
+
+    OTA_manager.updateFromFS();
+
+    // Do nothing forevermore
+    // while (true)
+    // {
+    //     delay(1000);
+    // }
+  }
