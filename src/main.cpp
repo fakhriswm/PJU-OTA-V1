@@ -40,6 +40,8 @@
 #include <TimeAlarms.h>
 #include <OTA_manager.h>
 #include <CRC32.h>
+#include "soc/timer_group_struct.h"
+#include "soc/timer_group_reg.h"
 
 TinyGsm modem(SerialAT);
 TinyGsmClient client(modem);
@@ -95,6 +97,7 @@ uint8_t timer_update = 0;
 uint8_t timer_request = 0;
 bool command_lamp = false;
 bool lamp_state = false;
+bool task_update = false;
 
 //RTOS_func_declaration
 void task_connectivity( void *pvParameters );
@@ -115,7 +118,8 @@ void update_data();
 void adjust_time(uint16_t year, uint8_t month, uint8_t date, uint8_t hour, uint8_t minute,  uint8_t second);
 void change_schedule(uint8_t change_mod);
 void cek_lampstate();
-void running_OTA();
+void ceate_OTAtask();
+void OTA_task( void * parameter );
 
 void setup() {
   // put your setup code here, to run once:
@@ -123,7 +127,8 @@ void setup() {
   SerialAT.begin(115200);
   delay(1000);
   Serial.println("ESP32 RESET SYSTEM");
-
+  Serial.println(OTA_manager.get_version());
+  
   flash.begin(ee_size);
   config_all();
 
@@ -142,7 +147,6 @@ void setup() {
     Serial.println("sycn time with sim800l ");
   }         
   RTOS_initialization();
-  
 }
 
 void loop() {
@@ -213,6 +217,10 @@ void task_lamp(void *pvParameters)  // This is a task.
     serial_handle();
     Alarm.delay(1000);
     vTaskDelay(1);
+    if(task_update){
+      Serial.print("lamp task suspended");
+      vTaskDelete( NULL );
+    }
   }
 }
 
@@ -432,42 +440,46 @@ void cek_lampstate(){
   }
 }
 
-void running_OTA()
-{
+void ceate_OTAtask(){
+
+  Serial.print("perform OTA update on core :");
+  Serial.println(xPortGetCoreID());
   uint32_t knownCRC32 = 0x6f50d767;
   uint32_t knownFileSize = 1024;
   OTA_manager.spiffs_init();
+  yield();
   gsmConnect();
+  yield();
   Serial.print("connect OTA server :" + ota_server);
   if (!client.connect(ota_server.c_str(), ota_port))
-    {
-        Serial.println(" fail connect OTA server");
-        delay(10000);
-        return;
-    }
+  {
+    Serial.println(" fail connect OTA server");
+    delay(10000);
+    return;
+  }
   Serial.println("connected to OTA server");
-  // Make a HTTP request:
+    // Make a HTTP request:
   client.print(String("GET ") + ota_resource + " HTTP/1.0\r\n");
   client.print(String("Host: ") + ota_server + "\r\n");
   client.print("Connection: close\r\n\r\n");
   long timeout = millis();
   while (client.available() == 0)
+  {
+     if (millis() - timeout > 500000L)
     {
-       if (millis() - timeout > 500000L)
-        {
-          Serial.println(">>> Client Timeout !");
-          client.stop();
-          delay(10000L);
-          return;
-        }
+      Serial.println(">>> Client Timeout !");
+      client.stop();
+      delay(10000L);
+      return;
     }
+  }
 
   Serial.println("Receiving Header");
-    uint32_t contentLength = knownFileSize;
+  uint32_t contentLength = knownFileSize;
 
-    File file = SPIFFS.open("/update.bin", FILE_APPEND);
+  File file = SPIFFS.open("/update.bin", FILE_APPEND);
 
-    while (client.available())
+  while (client.available())
     {
         String line = client.readStringUntil('\n');
         line.trim();
@@ -521,18 +533,32 @@ void running_OTA()
 
     client.stop();
     Serial.println("Disconnected from Server");
-    vTaskDelay(1);
+    yield();
     modem.gprsDisconnect();
     Serial.println("GPRS Disconnected");
-    vTaskDelay(1);
+    yield();
+
+    xTaskCreate(OTA_task,"OTA_task",50000,NULL,5,NULL);
+    vTaskDelete( NULL );
+}
+
+void OTA_task( void * parameter ){
+  (void)parameter;
+
+    TIMERG0.wdt_wprotect=TIMG_WDT_WKEY_VALUE;
+    TIMERG0.wdt_feed=1;
+    TIMERG0.wdt_wprotect=0;
+
+  for(;;)
+  {
     //float duration = float(timeElapsed) / 1000.0;
 
-    Serial.println("File size: " + contentLength);
-    Serial.println("read : " + readLength);
-    Serial.print("Calculated. CRC32: 0x");
-    Serial.println(crc.finalize(), HEX);
-    Serial.print("known CRC32:    0x");
-    Serial.println(knownCRC32, HEX);
+    // Serial.println("File size: " + contentLength);
+    // Serial.println("read : " + readLength);
+    // Serial.print("Calculated. CRC32: 0x");
+    // Serial.println(crc.finalize(), HEX);
+    // Serial.print("known CRC32:    0x");
+    // Serial.println(knownCRC32, HEX);
     //Serial.println("Time duration: " + String(duration) + "s");
     Serial.println("Wait for 3 second");
     for (int i = 0; i < 3; i++)
@@ -551,3 +577,4 @@ void running_OTA()
     //     delay(1000);
     // }
   }
+}

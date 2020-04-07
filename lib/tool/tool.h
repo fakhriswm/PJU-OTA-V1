@@ -30,11 +30,12 @@ extern uint8_t dimmer1;
 extern uint8_t dimmer2;
 extern uint16_t lamppower;
 extern bool command_lamp;
+extern bool task_update;
 
 extern void data_process(float volt, float curr, float pow, float wh, float freq, float pf);
 extern void adjust_time(uint16_t year, uint8_t month, uint8_t date, uint8_t hour, uint8_t minute,  uint8_t second);
 extern void change_schedule(uint8_t change_mod);
-extern void running_OTA();
+extern void ceate_OTAtask();
 
 void serial_handle();
 void config_all();

@@ -15,4 +15,5 @@ class update_manager {
         void writeFile(fs::FS &fs, const char *path, const char *message);
         void deleteFile(fs::FS &fs, const char *path);
         void spiffs_init();
+        String get_version();
 };

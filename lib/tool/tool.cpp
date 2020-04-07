@@ -251,7 +251,8 @@ String callback_handle(String subtopic, String payload){
       else if (subtopic == "/lamppower"){
         return parse_lamppower(value) + token;}
       else if (subtopic == "/OTA"){
-        running_OTA();}
+        task_update = true;
+        ceate_OTAtask();}
     } 
     else{
        return "";
