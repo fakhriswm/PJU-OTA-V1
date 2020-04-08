@@ -29,6 +29,9 @@ extern uint16_t timedelay;
 extern uint8_t dimmer1;
 extern uint8_t dimmer2;
 extern uint16_t lamppower;
+extern String ota_server;
+extern String ota_resource;
+extern uint16_t ota_port;
 extern bool command_lamp;
 extern bool task_update;
 

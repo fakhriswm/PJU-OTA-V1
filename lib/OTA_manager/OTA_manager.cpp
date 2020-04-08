@@ -1,6 +1,7 @@
 #include <OTA_manager.h>
 
 String update_manager :: get_version(){
+    // /PJU_1_2.bin
     delay(1000);
     if (!SPIFFS.begin(true)) {
         Serial.println("An Error has occurred while mounting SPIFFS");
@@ -9,14 +10,13 @@ String update_manager :: get_version(){
     File root = SPIFFS.open("/");
  
     File file = root.openNextFile();
- 
-    while(file){
- 
-      Serial.print("FILE: ");
-      Serial.println(file.name());
-      file = root.openNextFile();
-  }
-  return "readsuksema";
+    String filename = file.name();
+    if(filename.substring(1,4) == "upd"){
+        return filename;
+    }
+    else{
+        return "";
+    }
 }
 
 void update_manager :: spiffs_init(){

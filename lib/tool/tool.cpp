@@ -170,6 +170,15 @@ String parse_timedelay(const String& value){
   return "tdelay|1";
 }
 
+String parse_OTA(const String& value){
+  ota_resource = parse_string(value,'|',0);
+  ota_port = parse_string(value,'|',1).toInt();
+  Serial.println("firmware download from" + ota_server + ota_resource + " port :" + String(ota_port));
+  task_update = true;
+  ceate_OTAtask();
+  return "OTA|1"
+}
+
 String parse_lamppower(const String& value){
   lamppower = value.toInt();
   config_t.set_lamppower(lamppower);
@@ -232,7 +241,7 @@ String callback_handle(String subtopic, String payload){
         return parse_time(value) + token;}
       else if  (subtopic == "/mode"){
         return parse_mode(value) + token;}
-      // else if  (subtopic == "/cfg"){}
+      else if  (subtopic == "/cfg"){}
       else if  (subtopic =="/reset"){
         Serial.println("Restarting");
         ESP.restart();
@@ -251,8 +260,7 @@ String callback_handle(String subtopic, String payload){
       else if (subtopic == "/lamppower"){
         return parse_lamppower(value) + token;}
       else if (subtopic == "/OTA"){
-        task_update = true;
-        ceate_OTAtask();}
+        return parse_OTA(value)+token;}
     } 
     else{
        return "";

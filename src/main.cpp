@@ -66,8 +66,8 @@ String backend_pass   = "";
 uint16_t backend_port = 0;
 
 String ota_server = "firmware-esp.s3-ap-southeast-1.amazonaws.com";
-uint16_t ota_port = 80;
-String ota_resource = "/firmware.bin";
+uint16_t ota_port = 0;
+String ota_resource = "";
 
 uint8_t netfail_counter = 0;
 uint8_t mode = 0;
@@ -95,6 +95,7 @@ uint8_t now_hour = 0,
 uint16_t now_year = 0;
 uint8_t timer_update = 0;
 uint8_t timer_request = 0;
+
 bool command_lamp = false;
 bool lamp_state = false;
 bool task_update = false;
@@ -127,8 +128,8 @@ void setup() {
   SerialAT.begin(115200);
   delay(1000);
   Serial.println("ESP32 RESET SYSTEM");
+
   Serial.println(OTA_manager.get_version());
-  
   flash.begin(ee_size);
   config_all();
 
