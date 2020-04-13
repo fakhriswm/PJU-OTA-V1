@@ -49,6 +49,7 @@ String parse_mode(const String& value);
 String parse_time(const String& value);
 String parse_server(const String& value);
 String parse_dimmer(const String& value);
+String parse_OTA(const String& value);
 String parse_timedelay(const String& value);
 String parse_lamppower(const String& value);
 String callback_handle(String subtopic, String payload);

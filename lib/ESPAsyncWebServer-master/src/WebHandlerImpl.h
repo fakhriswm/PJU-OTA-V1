@@ -27,7 +27,7 @@
 #endif
 
 #include "stddef.h"
-#include <time.h>
+#include <_time.h>
 
 class AsyncStaticWebHandler: public AsyncWebHandler {
    using File = fs::File;

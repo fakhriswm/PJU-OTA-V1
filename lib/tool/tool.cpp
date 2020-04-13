@@ -176,7 +176,7 @@ String parse_OTA(const String& value){
   Serial.println("firmware download from" + ota_server + ota_resource + " port :" + String(ota_port));
   task_update = true;
   ceate_OTAtask();
-  return "OTA|1"
+  return "OTA|1";
 }
 
 String parse_lamppower(const String& value){

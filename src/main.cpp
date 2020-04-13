@@ -1,3 +1,7 @@
+//version
+#define FW_VERSION "1.0"
+#define MODEL "8 W/ OTA"
+
 //FreeRTOS
 #if CONFIG_FREERTOS_UNICORE
 #define ARDUINO_RUNNING_CORE 0
@@ -32,14 +36,16 @@
 #include <TinyGsmClient.h>
 #include <PubSubClient.h>
 #include <timeGSM.h>
-#include <WiFi.h>
 #include <tool.h>
 #include <eepromESP.h>
 #include <eepromESP_table.h>
-#include <TimeLib.h>
+//#include <TimeLib.h>
 #include <TimeAlarms.h>
 #include <OTA_manager.h>
 #include <CRC32.h>
+#include <WiFi.h>
+#include <index_html.h>
+#include <ESPAsyncWebServer.h>
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
 
@@ -51,6 +57,7 @@ update_manager OTA_manager;
 timeGSM chrono;
 eepromESP flash;
 slave slave;
+AsyncWebServer myserver(80);
 
 AlarmId on_alarm, 
         off_alarm, 
@@ -100,6 +107,9 @@ bool command_lamp = false;
 bool lamp_state = false;
 bool task_update = false;
 
+const char* ssid = "CUBE";
+const char* password = "123456789";
+
 //RTOS_func_declaration
 void task_connectivity( void *pvParameters );
 void task_lamp( void *pvParameters );
@@ -121,6 +131,7 @@ void change_schedule(uint8_t change_mod);
 void cek_lampstate();
 void ceate_OTAtask();
 void OTA_task( void * parameter );
+String processor(const String& var);
 
 void setup() {
   // put your setup code here, to run once:
@@ -128,14 +139,25 @@ void setup() {
   SerialAT.begin(115200);
   delay(1000);
   Serial.println("ESP32 RESET SYSTEM");
-
-  Serial.println(OTA_manager.get_version());
   flash.begin(ee_size);
   config_all();
-
   dev_code = dev_id();
   Serial.println("Device code : " + dev_code);
   Serial.print("Subs ch : "); Serial.println(SUBS_TOPIC);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+       delay(1000);
+       Serial.print("Connecting to WiFi..");
+  }
+  // Print ESP32 Local IP Address
+  Serial.println(WiFi.localIP());
+
+  myserver.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/html", index_html, processor);
+    });
+    
+  myserver.begin();
 
   modem.restart();
   
@@ -150,9 +172,7 @@ void setup() {
   RTOS_initialization();
 }
 
-void loop() {
-  //empty
-}
+void loop() {}
 
 void RTOS_initialization(){
    xTaskCreatePinnedToCore(
@@ -578,4 +598,36 @@ void OTA_task( void * parameter ){
     //     delay(1000);
     // }
   }
+}
+
+String processor(const String& var){
+  Serial.println(var);
+  if(var == "APN"){
+    return apn.c_str();
+  }
+  else if(var == "MODEL"){
+    return MODEL;
+  }
+  else if(var == "FW_VERSION"){
+    return FW_VERSION;
+  }
+  else if(var == "SSID"){
+    return ssid;
+  }
+  else if(var == "PASSWRD"){
+    return password;
+  }
+  else if(var == "PJU_CODE"){
+    return dev_code.c_str();
+  }
+  else if(var == "BACKSERVER"){
+    return backend.c_str();
+  }
+  else if(var == "BACKPASS"){
+    return backend_pass.c_str();
+  }
+  else if(var == "BACKPORT"){
+    return String(backend_port);
+  }
+  return String();
 }
