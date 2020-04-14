@@ -22,11 +22,6 @@ class eepromESP {
 		uint8_t read_byte(size_t addr);
 		String read_str(size_t addr);   
         size_t eeprom_size; 
-
-        void set_ssid (const String& ssid);
-        String read_ssid ();
-        void set_passwrd (const String& passwrd);
-        String read_passwrd ();
         void set_onSchedule (const String& timeOn);
         String read_onSchedule ();
         void set_offSchedule (const String& timeOff);
@@ -55,4 +50,8 @@ class eepromESP {
         uint8_t read_timedelay();
         void set_lamppower(uint16_t lamppower);
         uint16_t read_lamppower();
+        void set_ssid(const String& ssid);
+        String read_ssid();
+        void set_pwssid(const String& pwssid);
+        String read_pwssid();
 };

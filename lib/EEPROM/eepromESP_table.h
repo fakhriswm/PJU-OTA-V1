@@ -17,9 +17,9 @@
 #define ee_control_len      uint8_len
 #define ee_dimmer1           ee_control + ee_control_len
 #define ee_dimmer1_len       uint8_len
-#define ee_ssid             ee_dimmer1 + ee_dimmer1_len
-#define ee_ssid_len         null_terminator + 8
-#define ee_passwrd          ee_ssid + ee_ssid_len
+#define ee_ssid0             ee_dimmer1 + ee_dimmer1_len
+#define ee_ssid0_len         null_terminator + 8
+#define ee_passwrd          ee_ssid0 + ee_ssid0_len
 #define ee_passwrd_len      null_terminator + 10
 #define ee_apn              ee_passwrd + ee_passwrd_len
 #define ee_apn_len          null_terminator + 15
@@ -39,4 +39,7 @@
 #define ee_NightSchedule_len   null_terminator + 8
 #define ee_lamppower        ee_NigtSchedule + ee_NightSchedule_len
 #define ee_lamppower_len    uint16_len
-
+#define ee_ssid             ee_lamppower + ee_lamppower_len
+#define ee_ssid_len         null_terminator + 20
+#define ee_pwssid           ee_ssid + ee_ssid_len
+#define ee_pwssid_len       null_terminator + 20

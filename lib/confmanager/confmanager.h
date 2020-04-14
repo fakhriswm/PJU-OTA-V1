@@ -34,6 +34,8 @@ public :
     String set_user(const String& payload);
     String set_pass(const String& payload);
     String set_apn(const String& payload);
+    String set_ssid(const String& payload);
+    String set_pwssid(const String& payload);
     uint8_t set_dimmer1 (uint8_t payload);
     uint8_t set_dimmer2 (uint8_t payload);
     uint8_t read_control();
@@ -47,6 +49,8 @@ public :
     String read_user();
     String read_pass();
     String read_apn();
+    String read_ssid();
+    String read_pwssid();
     void read_OnSchedule(time_on_config_t* time_on_cfg);
     void read_OffSchedule(time_off_config_t* time_off_cfg);
     void read_NightSchedule(night_time_config_t* night_time_cfg);

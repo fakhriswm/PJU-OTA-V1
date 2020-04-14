@@ -112,22 +112,6 @@ void eepromESP::write_str(size_t addr, const char* str)
 	EEPROM.commit();
 }
 
-String eepromESP::read_ssid() 
-{
-    return read_str(ee_ssid);
-}
-void eepromESP::set_ssid(const String& ssid)
-{
-    write_str(ee_ssid, ssid);
-}
-String eepromESP::read_passwrd() 
-{
-    return read_str(ee_passwrd);
-}
-void eepromESP::set_passwrd(const String& passwrd)
-{
-    write_str(ee_passwrd, passwrd);
-}
 void eepromESP::set_onSchedule(const String& timeOn)
 {
     write_str(ee_OnSchedule, timeOn);
@@ -258,4 +242,20 @@ void eepromESP::set_lamppower(uint16_t lamppower)
 uint16_t eepromESP::read_lamppower()
 {
     return read_byte(ee_lamppower);
+}
+void eepromESP::set_ssid(const String& ssid)
+{
+    write_str(ee_ssid, ssid);
+}
+String eepromESP::read_ssid() 
+{
+    return read_str(ee_ssid);
+}
+void eepromESP::set_pwssid(const String& pwssid)
+{
+    write_str(ee_pwssid, pwssid);
+}
+String eepromESP::read_pwssid() 
+{
+    return read_str(ee_pwssid);
 }

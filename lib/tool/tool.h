@@ -32,6 +32,8 @@ extern uint16_t lamppower;
 extern String ota_server;
 extern String ota_resource;
 extern uint16_t ota_port;
+extern String ssid;
+extern String password;
 extern bool command_lamp;
 extern bool task_update;
 
@@ -53,6 +55,8 @@ String parse_OTA(const String& value);
 String parse_timedelay(const String& value);
 String parse_lamppower(const String& value);
 String callback_handle(String subtopic, String payload);
+String parse_apn(const String& value);
+String parse_wifi(const String& value);
 
 class slave {
     public : 

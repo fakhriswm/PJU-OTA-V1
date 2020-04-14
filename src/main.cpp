@@ -72,7 +72,7 @@ String backend_user   = "";
 String backend_pass   = "";
 uint16_t backend_port = 0;
 
-String ota_server = "firmware-esp.s3-ap-southeast-1.amazonaws.com";
+String ota_server = "";
 uint16_t ota_port = 0;
 String ota_resource = "";
 
@@ -107,8 +107,8 @@ bool command_lamp = false;
 bool lamp_state = false;
 bool task_update = false;
 
-const char* ssid = "CUBE";
-const char* password = "123456789";
+String ssid = "CUBE";
+String password = "123456789";
 
 //RTOS_func_declaration
 void task_connectivity( void *pvParameters );
@@ -229,7 +229,7 @@ void task_lamp(void *pvParameters)  // This is a task.
     Alarm.delay(1000);
     vTaskDelay(1);
     if(task_update){
-      Serial.print("lamp task suspended");
+      Serial.println("lamp task suspended");
       vTaskDelete( NULL );
     }
   }
@@ -591,7 +591,6 @@ void OTA_task( void * parameter ){
 }
 
 String processor(const String& var){
-  Serial.println(var);
   if(var == "APN"){
     return apn.c_str();
   }
@@ -605,7 +604,15 @@ String processor(const String& var){
     return ssid;
   }
   else if(var == "PASSWRD"){
-    return password;
+    return password.c_str();
+  }
+  else if(var == "PASSWRDDSPLY"){
+    int len = password.length();
+    String buf = "";
+    for(int i=1; i<=len; i++){
+      buf += "*";
+    }
+    return buf;
   }
   else if(var == "PJU_CODE"){
     return dev_code.c_str();
@@ -619,6 +626,14 @@ String processor(const String& var){
   else if(var == "BACKPASS"){
     return backend_pass.c_str();
   }
+  else if(var == "BACKPASSDSPLY"){
+    int len = backend_pass.length();
+    String buf = "";
+    for(int i=1; i<=len; i++){
+      buf += "*";
+    }
+    return buf;
+  }
   else if(var == "BACKPORT"){
     return String(backend_port);
   }
@@ -629,7 +644,7 @@ String processor(const String& var){
 }
 
 void start_webserver(){
-  WiFi.begin(ssid, password);
+  WiFi.begin(ssid.c_str(), password.c_str());
   while (WiFi.status() != WL_CONNECTED) {
        delay(1000);
        Serial.print("Connecting to WiFi..");
@@ -642,30 +657,35 @@ void start_webserver(){
     });
 
   myserver.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    String inputMessage;
-    String inputParam;
     //http://192.168.43.228/get?apn=axis&ssid=CUBE&ssid_password=123456789&backend_server=158.140.167.173&backend_port=1884&backend_username=eyroMQTT&backend_password=eyroMQTT1234
-    // GET input1 value on <ESP_IP>/get?input1=<inputMessage>
+    // GET input1 value on <ESP_IP>/get?input1=<inputMessage>    
     if (request->hasParam("apn")) {
-      Serial.print("apn :");
-      Serial.println(request->getParam("apn")->value());
+      parse_apn(request->getParam("apn")->value());
     }
-    // GET input2 value on <ESP_IP>/get?input2=<inputMessage>
-    if (request->hasParam("ssid")) {
-      Serial.print("ssid :");
-      Serial.println(request->getParam("ssid")->value());
+    if (request->hasParam("ssid") && request->hasParam("ssid_password")){
+      String value = request->getParam("ssid")->value() + "|" + request->getParam("ssid_password")->value();
+      parse_wifi(value); 
     }
-    // GET input3 value on <ESP_IP>/get?input3=<inputMessage>
-    if (request->hasParam("ssid_password")) {
-      Serial.println("ssid_password :");
-      Serial.println(request->getParam("ssid_password")->value());
+    if (request->hasParam("backend_server") && request->hasParam("backend_username") && request->hasParam("backend_port") && request->hasParam("backend_password")){
+      String value = request->getParam("backend_server")->value() + "|"
+                + request->getParam("backend_port")->value().toInt() + "|"
+                + request->getParam("backend_username")->value() + "|"
+                + request->getParam("backend_password")->value();
+      parse_server(value);
     }
-    else {
-      inputMessage = "No message sent";
-      inputParam = "none";
-    }
-    request->send(200, "text/html", "HTTP GET request sent to your ESP on input field <br><a href=\"/\">Return to Home Page</a>");
+    request->send(200, "text/html", "Setting parameter success, please return home page and reboot soon! <br><a href=\"/\">Return to Home Page</a>");
   });
+
+  myserver.on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request){   
+    request->send(200, "text/html", "slighter will reboot and take a few minute <br><a href=\"/\">Return to Home Page</a>");
+    ESP.restart();
+  });
+
+  myserver.on("/resetwh", HTTP_GET, [](AsyncWebServerRequest *request){
+    slave.reset_energy();   
+    request->send(200, "text/html", "Reset WH success <br><a href=\"/\">Return to Home Page</a>");
+  });
+
     
   myserver.begin();
 }

@@ -168,3 +168,19 @@ uint16_t confmanager::read_lamppower(){
     return value;
 } 
 
+String confmanager::set_ssid(const String& payload){
+    conf.set_ssid(payload);
+    return read_ssid();
+}
+String confmanager::read_ssid(){
+    String value = conf.read_ssid();
+    return value;
+}
+String confmanager::set_pwssid(const String& payload){
+    conf.set_pwssid(payload);
+    return read_pwssid();
+}
+String confmanager::read_pwssid(){
+    String value = conf.read_pwssid();
+    return value;
+}

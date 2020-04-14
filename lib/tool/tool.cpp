@@ -68,7 +68,11 @@ void serial_handle(){
         }
         else if(command_type=="lamppower"){
           parse_lamppower(value);
-          Serial.println("lamppower" + value);
+          Serial.println("lamppower :" + value);
+        }
+        else if(command_type=="apn"){
+          parse_apn(value);
+          Serial.println("apn :" + value);
         }
       }
       else if(command=="rst"){
@@ -121,6 +125,7 @@ String parse_mode(const String& value){
     return "m|1";
   }
 }
+
 String parse_time(const String& value){
   //e.g: 22:20:12|26/03/2020
   String time = parse_string(value,'|',0);
@@ -136,6 +141,7 @@ String parse_time(const String& value){
   adjust_time(year,month,date,hour,minute,second);  
   return "timesync|1";
 }
+
 String parse_dimmer(const String& value){
   dimmer1 = parse_string(value, '|',0).toInt();
   config_t.set_dimmer1(dimmer1);
@@ -153,7 +159,7 @@ String parse_server(const String& value){
   backend_port = parse_string(value,'|',1).toInt();
   backend_user = parse_string(value,'|',2);
   backend_pass = parse_string(value,'|',3);
-  Serial.print("server change on backend :" 
+  Serial.println("server change on backend :" 
               + config_t.set_backend(backend) 
               + " port :"
               + config_t.set_port((String)backend_port)
@@ -171,9 +177,10 @@ String parse_timedelay(const String& value){
 }
 
 String parse_OTA(const String& value){
-  ota_resource = parse_string(value,'|',0);
-  ota_port = parse_string(value,'|',1).toInt();
-  Serial.println("firmware download from" + ota_server + ota_resource + " port :" + String(ota_port));
+  ota_server = parse_string(value,'|',0);
+  ota_resource = "/" + parse_string(value,'|',1);
+  ota_port = parse_string(value,'|',2).toInt();
+  Serial.println("firmware download from https://" + ota_server + ota_resource + " port :" + String(ota_port));
   task_update = true;
   ceate_OTAtask();
   return "OTA|1";
@@ -185,6 +192,20 @@ String parse_lamppower(const String& value){
   return "lamp|1";
 }
 
+String parse_wifi(const String& value){
+  ssid = parse_string(value,'|',0);
+  password = parse_string(value,'|',1);
+  Serial.println("wifi change ssid:" + config_t.set_ssid(ssid)
+                  + " password :" + config_t.set_pwssid(password));
+  return "wifi|1";
+}
+
+String parse_apn(const String& value){
+  apn = value;
+  config_t.set_apn(value);
+  Serial.println("apn change :" + apn);
+  return "apn|1";
+}
 
 String parse_string(String data, char separator, int index){
   int found = 0;
@@ -231,9 +252,9 @@ void config_all()
 }
 
 String callback_handle(String subtopic, String payload){
-    String ret_token = parse_string(payload,'-',1);
+    String ret_token = parse_string(payload,'&',1);
     if(ret_token.length()==TOKEN_LENGTH){
-      String value = parse_string(payload,'-',0); 
+      String value = parse_string(payload,'&',0); 
       String token = "|" + ret_token;
       if       (subtopic == "/dim"){
         return parse_dimmer(value) + token;}

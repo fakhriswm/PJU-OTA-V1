@@ -36,7 +36,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 		<td></td>
 		<td>Backend pass</td>
 		<td>: </td>
-		<td>%BACKPASS%</td>
+		<td>%BACKPASSDSPLY%</td>
 	</tr>
     <tr>
 		<td>SSID name</td>
@@ -51,7 +51,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 	<tr>
 		<td>SSID pass</td>
 		<td>: </td>
-		<td>%PASSWRD%</td>
+		<td>%PASSWRDDSPLY%</td>
 		<td></td>
 		<td></td>
 		<td>Device Time</td>
@@ -99,8 +99,12 @@ const char index_html[] PROGMEM = R"rawliteral(
 	</tr>
   </table>
   <br>
-  <input type="submit" value="Save Config">
-  <form action = "/reset"><input type="reset"></form> 
-  </form> 
+	<input type="submit" value="Save Config">
+</form> 
+<p>
+	<a href="/reboot"><button class="button">Reboot</button> &emsp;
+	<a href="/timesync"><button class="button">Time sync</button> &emsp;
+	<a href="/resetwh"><button class="button">Reset WH</button> &emsp;
+</p>  
 </body>
 </html>)rawliteral";
