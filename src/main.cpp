@@ -132,6 +132,7 @@ void cek_lampstate();
 void ceate_OTAtask();
 void OTA_task( void * parameter );
 String processor(const String& var);
+void start_webserver();
 
 void setup() {
   // put your setup code here, to run once:
@@ -145,23 +146,12 @@ void setup() {
   Serial.println("Device code : " + dev_code);
   Serial.print("Subs ch : "); Serial.println(SUBS_TOPIC);
 
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-       delay(1000);
-       Serial.print("Connecting to WiFi..");
-  }
-  // Print ESP32 Local IP Address
-  Serial.println(WiFi.localIP());
+  chrono.TimeInit();
 
-  myserver.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/html", index_html, processor);
-    });
-    
-  myserver.begin();
+  start_webserver();
 
   modem.restart();
   
-  chrono.TimeInit();
   cek_time();
   delay(100);
   
@@ -623,11 +613,59 @@ String processor(const String& var){
   else if(var == "BACKSERVER"){
     return backend.c_str();
   }
+  else if(var == "BACKUSER"){
+    return backend_user.c_str();
+  }
   else if(var == "BACKPASS"){
     return backend_pass.c_str();
   }
   else if(var == "BACKPORT"){
     return String(backend_port);
   }
+  else if(var == "DEVTIME"){
+    return chrono.get_completeTime().c_str();
+  }
   return String();
+}
+
+void start_webserver(){
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+       delay(1000);
+       Serial.print("Connecting to WiFi..");
+  }
+  // Print ESP32 Local IP Address
+  Serial.println(WiFi.localIP());
+
+  myserver.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/html", index_html, processor);
+    });
+
+  myserver.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    String inputMessage;
+    String inputParam;
+    //http://192.168.43.228/get?apn=axis&ssid=CUBE&ssid_password=123456789&backend_server=158.140.167.173&backend_port=1884&backend_username=eyroMQTT&backend_password=eyroMQTT1234
+    // GET input1 value on <ESP_IP>/get?input1=<inputMessage>
+    if (request->hasParam("apn")) {
+      Serial.print("apn :");
+      Serial.println(request->getParam("apn")->value());
+    }
+    // GET input2 value on <ESP_IP>/get?input2=<inputMessage>
+    if (request->hasParam("ssid")) {
+      Serial.print("ssid :");
+      Serial.println(request->getParam("ssid")->value());
+    }
+    // GET input3 value on <ESP_IP>/get?input3=<inputMessage>
+    if (request->hasParam("ssid_password")) {
+      Serial.println("ssid_password :");
+      Serial.println(request->getParam("ssid_password")->value());
+    }
+    else {
+      inputMessage = "No message sent";
+      inputParam = "none";
+    }
+    request->send(200, "text/html", "HTTP GET request sent to your ESP on input field <br><a href=\"/\">Return to Home Page</a>");
+  });
+    
+  myserver.begin();
 }

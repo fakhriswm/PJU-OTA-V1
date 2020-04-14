@@ -8,6 +8,14 @@ void timeGSM ::TimeInit()
      }
 }
 
+String timeGSM :: get_completeTime(){
+    char buf[25];
+    DateTime datetime = rtc.now();
+    sprintf(buf,"%02d:%02d:%02d %02d/%02d/%02d", datetime.hour(),datetime.minute(),datetime.second(),datetime.day(),datetime.month(),datetime.year());
+    Serial.println(buf);
+    return buf;
+}
+
 void timeGSM :: getGSMtime(String GSMtime)
 {
     //19/12/26,10:57:35+28

@@ -24,9 +24,9 @@ const char index_html[] PROGMEM = R"rawliteral(
 		<td>%MODEL%</td>
 		<td></td>
 		<td></td>
-		<td>Backend pass</td>
+		<td>Backend user</td>
 		<td>: </td>
-		<td>%BACKPASS%</td>
+		<td>%BACKUSER%</td>
 	</tr>
     <tr>
 		<td>FW Version</td>
@@ -34,9 +34,9 @@ const char index_html[] PROGMEM = R"rawliteral(
 		<td>%FW_VERSION%</td>
 		<td></td>
 		<td></td>
-		<td>Backend port</td>
+		<td>Backend pass</td>
 		<td>: </td>
-		<td>%BACKPORT%</td>
+		<td>%BACKPASS%</td>
 	</tr>
     <tr>
 		<td>SSID name</td>
@@ -44,6 +44,9 @@ const char index_html[] PROGMEM = R"rawliteral(
 		<td>%SSID%</td>
 		<td></td>
 		<td></td>
+		<td>Backend port</td>
+		<td>: </td>
+		<td>%BACKPORT%</td>
 	</tr>
 	<tr>
 		<td>SSID pass</td>
@@ -51,6 +54,9 @@ const char index_html[] PROGMEM = R"rawliteral(
 		<td>%PASSWRD%</td>
 		<td></td>
 		<td></td>
+		<td>Device Time</td>
+		<td>: </td>
+		<td>%DEVTIME%</td>
 	</tr>
 	<tr>
 		<td>APN</td>
@@ -65,31 +71,31 @@ const char index_html[] PROGMEM = R"rawliteral(
   <table border="0">
     <tr>
 		<td>APN</td>
-		<td>: <input type="text" name="apn" value="xl"></td>
+		<td>: <input type="text" name="apn" value=%APN%></td>
 	</tr>
     <tr>
 		<td>SSID</td>
-		<td>: <input type="text" name="ssid" value="eyro"></td>
+		<td>: <input type="text" name="ssid" value=%SSID%></td>
 	</tr>
     <tr>
 		<td>SSID Password</td>
-		<td>: <input type="text" name="ssid_password" value="eyro1234"></td>
+		<td>: <input type="text" name="ssid_password" value=%PASSWRD%></td>
 	</tr>
     <tr>
 		<td>Backend Server</td>
-		<td>: <input type="text" name="backend_server" value="158.140.167.173"></td>
+		<td>: <input type="text" name="backend_server" value=%BACKSERVER%></td>
 	</tr>
     <tr>
 		<td>Backend Port</td>
-		<td>: <input type="text" name="backend_port" value="1884"></td>
+		<td>: <input type="text" name="backend_port" value=%BACKPORT%></td>
 	</tr>
     <tr>
 		<td>Backend Username</td>
-		<td>: <input type="text" name="backend_username" value="eyroMQTT"></td>
+		<td>: <input type="text" name="backend_username" value=%BACKUSER%></td>
 	</tr>
     <tr>
 		<td>Backend Password </td>
-		<td>: <input type="text" name="backend_password" value="eyroMQTT1234"></td>
+		<td>: <input type="text" name="backend_password" value=%BACKPASS%></td>
 	</tr>
   </table>
   <br>

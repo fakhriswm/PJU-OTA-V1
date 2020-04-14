@@ -10,6 +10,7 @@ class timeGSM
         void getGSMtime(String GSMtime);
         void adjust_rtc(uint16_t year, uint8_t month, uint8_t date, uint8_t hour, uint8_t minute,  uint8_t second);
         void TimeInit();
+        String get_completeTime();
         uint8_t getSecond();
         uint8_t getMinute();
         uint8_t getHour();
