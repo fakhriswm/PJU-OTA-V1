@@ -39,13 +39,14 @@
 #include <tool.h>
 #include <eepromESP.h>
 #include <eepromESP_table.h>
-//#include <TimeLib.h>
 #include <TimeAlarms.h>
 #include <OTA_manager.h>
 #include <CRC32.h>
 #include <WiFi.h>
 #include <index_html.h>
 #include <ESPAsyncWebServer.h>
+#include <Update.h>
+#include <ESPmDNS.h>
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
 
@@ -58,6 +59,7 @@ timeGSM chrono;
 eepromESP flash;
 slave slave;
 AsyncWebServer myserver(80);
+size_t content_len;
 
 AlarmId on_alarm, 
         off_alarm, 
@@ -109,6 +111,7 @@ bool task_update = false;
 
 String ssid = "CUBE";
 String password = "123456789";
+char host[25] = "slighter_dashboard";
 
 //RTOS_func_declaration
 void task_connectivity( void *pvParameters );
@@ -133,6 +136,8 @@ void ceate_OTAtask();
 void OTA_task( void * parameter );
 String processor(const String& var);
 void start_webserver();
+void handleDoUpdate(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final);
+void printProgress(size_t prg, size_t sz);
 
 void setup() {
   // put your setup code here, to run once:
@@ -355,13 +360,16 @@ void control_on(){
   command_lamp = true;
   slave.send_command(LAMP_ON);
 }
+
 void control_off(){
   command_lamp = false;
   slave.send_command(LAMP_OFF);
 }
+
 void control_dimmer(){
   Serial.println("night mode");
 }
+
 void update_data(){
   slave.request_data();
 }
@@ -652,6 +660,8 @@ void start_webserver(){
   // Print ESP32 Local IP Address
   Serial.println(WiFi.localIP());
 
+  MDNS.begin(host);
+
   myserver.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send_P(200, "text/html", index_html, processor);
     });
@@ -681,11 +691,57 @@ void start_webserver(){
     ESP.restart();
   });
 
+  myserver.on("/update", HTTP_GET, [](AsyncWebServerRequest *request){   
+    request->send(200, "text/html", "<form method='POST' action='/doUpdate' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>");
+  });
+  
+  myserver.on("/doUpdate", HTTP_POST,
+    [](AsyncWebServerRequest *request) {},
+    [](AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data,
+                  size_t len, bool final) {handleDoUpdate(request, filename, index, data, len, final);}
+  );
+
   myserver.on("/resetwh", HTTP_GET, [](AsyncWebServerRequest *request){
     slave.reset_energy();   
     request->send(200, "text/html", "Reset WH success <br><a href=\"/\">Return to Home Page</a>");
   });
 
-    
+  Update.onProgress(printProgress);
   myserver.begin();
+  MDNS.addService("http", "tcp", 80);
+  Serial.printf("ready! open http://%s in your browser", host);
+}
+
+void handleDoUpdate(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
+  if (!index){
+    Serial.println("Update");
+    content_len = request->contentLength();
+    // if filename includes spiffs, update the spiffs partition
+    int cmd = (filename.indexOf("spiffs") > -1) ? U_SPIFFS : U_FLASH;
+    if (!Update.begin(UPDATE_SIZE_UNKNOWN, cmd)) {
+      Update.printError(Serial);
+    }
+  }
+
+  if (Update.write(data, len) != len) {
+    Update.printError(Serial);
+  }
+
+  if (final) {
+    AsyncWebServerResponse *response = request->beginResponse(302, "text/plain", "Please wait while the device reboots");
+    response->addHeader("Refresh", "20");  
+    response->addHeader("Location", "/");
+    request->send(response);
+    if (!Update.end(true)){
+      Update.printError(Serial);
+    } else {
+      Serial.println("Update complete");
+      Serial.flush();
+      ESP.restart();
+    }
+  }
+}
+
+void printProgress(size_t prg, size_t sz) {
+  Serial.printf("Progress: %d%%\n", (prg*100)/content_len);
 }
