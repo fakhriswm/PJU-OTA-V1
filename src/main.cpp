@@ -706,6 +706,40 @@ void start_webserver(){
     request->send(200, "text/html", "Reset WH success <br><a href=\"/\">Return to Home Page</a>");
   });
 
+  myserver.on("/timesync", HTTP_GET, [](AsyncWebServerRequest *request){
+    String value = request->getParam("timesync")->value();
+    if (value != NULL){
+      Serial.println(value);
+      //2020-04-16T17:00
+      //22:20:12|26/03/2020
+      String time_value = value.substring(11,13) + ":" + value.substring(14) + ":00|"
+                          + value.substring(8,10) + "/" + value.substring(5,7) + "/" + value.substring(0,4);
+      parse_time(time_value);
+      request->send(200, "text/html", "Time sync success <br><a href=\"/\">Return to Home Page</a>");
+    } 
+    else{
+      request->send(200, "text/html", "Time sync failed, please fill completely <br><a href=\"/\">Return to Home Page</a>");
+    } 
+  });
+  //http://slighter_dashboard/lamp?mode=0&time_on=01%3A00&time_off=17%3A06&time_night=12%3A13&control=0&lamp_power=150
+  myserver.on("/lamp", HTTP_GET, [](AsyncWebServerRequest *request){
+    String str = "";
+     uint8_t mode_value = request->getParam("mode")->value().toInt();
+     if(mode_value == MANUAL_MODE){
+       uint8_t control_value = request->getParam("control")->value().toInt();
+       str = String(mode_value)+"|"+String(control_value);
+     }
+     else{
+      String time_on = request->getParam("time_on")->value(); Serial.println(time_on);
+      String time_off = request->getParam("time_off")->value(); Serial.println(time_off);
+      String time_night = request->getParam("time_night")->value(); Serial.println(time_night);
+      str = String(mode_value) +"|"+ time_on.substring(0,2) +":"+ time_on.substring(3,5) +"|"+ time_off.substring(0,2) +":"+ time_off.substring(3,5)
+            +"|"+ time_night.substring(0,2) +":"+ time_night.substring(3,5);
+     }
+     parse_mode(str);
+     request->send(200, "text/html", "config mode success <br><a href=\"/\">Return to Home Page</a>");
+  });
+
   Update.onProgress(printProgress);
   myserver.begin();
   MDNS.addService("http", "tcp", 80);
